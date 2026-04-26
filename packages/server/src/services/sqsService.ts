@@ -55,25 +55,40 @@ class AWSSQSService implements ISQSService {
   constructor(queueUrl: string) {
     this.queueUrl = queueUrl;
 
-    const credentials: {
-      accessKeyId: string;
-      secretAccessKey: string;
-      sessionToken?: string;
-    } = {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-    };
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const sessionToken = process.env.AWS_SESSION_TOKEN;
 
-    // Credenciais temporárias (AWS Academy, IAM Role, STS) exigem sessionToken
-    if (process.env.AWS_SESSION_TOKEN) {
-      credentials.sessionToken = process.env.AWS_SESSION_TOKEN;
-      console.log('[AWS-SQS] 🔑 Usando credenciais temporárias (sessionToken detectado)');
+    // Se as credenciais estiverem definidas no .env, usa-as explicitamente.
+    // Isso suporta credenciais permanentes (IAM user) e temporárias (Academy/STS).
+    // Se NÃO estiverem definidas, o SDK usa a credential provider chain automática:
+    //   EC2 Instance Profile (IAM Role) → ~/.aws/credentials → variáveis de ambiente
+    if (accessKeyId && secretAccessKey) {
+      const credentials: {
+        accessKeyId: string;
+        secretAccessKey: string;
+        sessionToken?: string;
+      } = { accessKeyId, secretAccessKey };
+
+      if (sessionToken) {
+        credentials.sessionToken = sessionToken;
+        console.log('[AWS-SQS] 🔑 Credenciais temporárias detectadas (sessionToken presente)');
+      } else {
+        console.log('[AWS-SQS] 🔑 Credenciais permanentes detectadas (sem sessionToken)');
+      }
+
+      this.client = new SQSClient({
+        region: process.env.AWS_REGION || 'us-east-1',
+        credentials
+      });
+    } else {
+      // Sem credenciais no .env → usa IAM Role da EC2 (recomendado em produção)
+      console.log('[AWS-SQS] ☁️  Nenhuma credencial no .env. Usando IAM Role da instância EC2 (recomendado)');
+      this.client = new SQSClient({
+        region: process.env.AWS_REGION || 'us-east-1'
+        // credentials omitido → SDK usa instance metadata automaticamente
+      });
     }
-
-    this.client = new SQSClient({
-      region: process.env.AWS_REGION || 'us-east-1',
-      credentials
-    });
   }
 
   async sendMessage(message: SQSMessage): Promise<string> {
