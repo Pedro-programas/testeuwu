@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Frontend (React + Vite)
+  # ============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/client/Dockerfile
+    container_name: domino-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    volumes:
+      - ./packages/client/src:/app/src
+      - ./packages/client/public:/app/public
+    depends_on:
+      - backend
+    networks:
+      - domino-network
+    restart: unless-stopped
+
+  # ============================================
+  # Backend (API Gateway - Socket.IO)
+  # ============================================
+  backend:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: domino-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - USE_OFFLINE=true
+      - SQS_QUEUE_URL=http://localhost:9324/queue/domino-queue
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./packages/server/src:/app/src
+      - ./packages/server/dist:/app/dist
+    depends_on:
+      - worker
+    networks:
+      - domino-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # ============================================
+  # Worker (SQS Consumer - Game Logic)
+  # ============================================
+  worker:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: domino-worker
+    environment:
+      - NODE_ENV=production
+      - USE_OFFLINE=true
+      - SQS_QUEUE_URL=http://localhost:9324/queue/domino-queue
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./packages/server/src:/app/src
+      - ./packages/server/dist:/app/dist
+    networks:
+      - domino-network
+    restart: unless-stopped
+    command: npm run worker
+
+networks:
+  domino-network:
+    driver: bridge
+
+volumes:
+  node_modules_server:
+  node_modules_client:

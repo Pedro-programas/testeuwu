@@ -1,0 +1,29 @@
+{
+  "name": "domino-multiplayer",
+  "version": "1.0.0",
+  "description": "Jogo de Dominó Online Multiplayer com AWS SQS",
+  "private": true,
+  "workspaces": [
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "type-check": "npm run type-check --workspaces",
+    "start": "npm run start -w packages/server",
+    "worker": "npm run worker -w packages/server"
+  },
+  "keywords": [
+    "domino",
+    "multiplayer",
+    "socket.io",
+    "sqs",
+    "event-driven"
+  ],
+  "author": "Equipe de Desenvolvimento",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
+  }
+}
