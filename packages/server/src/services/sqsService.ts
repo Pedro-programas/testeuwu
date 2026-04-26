@@ -54,12 +54,25 @@ class AWSSQSService implements ISQSService {
 
   constructor(queueUrl: string) {
     this.queueUrl = queueUrl;
+
+    const credentials: {
+      accessKeyId: string;
+      secretAccessKey: string;
+      sessionToken?: string;
+    } = {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+    };
+
+    // Credenciais temporárias (AWS Academy, IAM Role, STS) exigem sessionToken
+    if (process.env.AWS_SESSION_TOKEN) {
+      credentials.sessionToken = process.env.AWS_SESSION_TOKEN;
+      console.log('[AWS-SQS] 🔑 Usando credenciais temporárias (sessionToken detectado)');
+    }
+
     this.client = new SQSClient({
       region: process.env.AWS_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-      }
+      credentials
     });
   }
 
